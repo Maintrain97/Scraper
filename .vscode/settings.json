@@ -1,0 +1,12 @@
+{
+    "java.project.sourcePaths": [
+        "."
+    ],
+    "java.project.referencedLibraries": [
+        "c:\\Users\\amain\\Downloads\\UcanAccess Jar Files\\commons-lang-2.6.jar",
+        "c:\\Users\\amain\\Downloads\\UcanAccess Jar Files\\commons-logging-1.2.jar",
+        "c:\\Users\\amain\\Downloads\\UcanAccess Jar Files\\hsqldb-2.4.0.jar",
+        "c:\\Users\\amain\\Downloads\\UcanAccess Jar Files\\jackcess-2.1.8.jar",
+        "c:\\Users\\amain\\Downloads\\UcanAccess Jar Files\\ucanaccess-4.0.2.jar"
+    ]
+}
