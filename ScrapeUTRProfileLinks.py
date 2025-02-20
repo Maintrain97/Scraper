@@ -1,8 +1,8 @@
 from playwright.sync_api import sync_playwright
 
 # URL to scrape
-URL = 'https://app.utrsports.net/schools/785?t=2'
-BASE_URL = 'https://app.utrsports.net'
+URL = "https://app.utrsports.net/schools/785?t=2"
+BASE_URL = "https://app.utrsports.net"
 EMAIL = "ianders@lisd.org"
 password = input("Enter your UTR password: ")
 
@@ -14,17 +14,19 @@ with sync_playwright() as p:
     page = context.new_page()
 
     # Navigate to login page
-    page.goto('https://app.utrsports.net/login')
+    page.goto("https://app.utrsports.net/login")
 
     # Fill in login credentials
-    page.fill('#emailInput', EMAIL)
-    page.fill('#passwordInput', password)
+    page.fill("#emailInput", EMAIL)
+    page.fill("#passwordInput", password)
 
     # Click login button
-    page.click('#myutr-app-body > div > div > div > div > div > div:nth-child(3) > form > div:nth-child(3) > button')
+    page.click(
+        "#myutr-app-body > div > div > div > div > div > div:nth-child(3) > form > div:nth-child(3) > button"
+    )
 
     # Wait for navigation to complete
-    page.wait_for_url('https://app.utrsports.net/home')
+    page.wait_for_url("https://app.utrsports.net/home")
 
     # Navigate to the roster page
     page.goto(URL)
@@ -42,7 +44,7 @@ with sync_playwright() as p:
     # Extract player profile links and names
     elements = page.locator("a[href*='/profiles/']").all()
     for element in elements:
-        href = element.get_attribute('href')
+        href = element.get_attribute("href")
         if href:
             full_url = BASE_URL + href
             name = element.inner_text().strip()
@@ -55,8 +57,8 @@ with sync_playwright() as p:
     browser.close()
 
 # Write extracted player information to a file
-with open('player_links.txt', 'w') as f:
+with open("player_links.txt", "w") as f:
     for info in sorted(player_info.values()):
-        f.write(info + '\n')
+        f.write(info + "\n")
 
 print(f"Extracted {len(player_info)} unique players with names and links.")
