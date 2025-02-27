@@ -21,9 +21,7 @@ with sync_playwright() as p:
     page.fill("#passwordInput", password)
 
     # Click login button
-    page.click(
-        "#myutr-app-body > div > div > div > div > div > div:nth-child(3) > form > div:nth-child(3) > button"
-    )
+    page.click("button.btn.btn-primary.btn-xl.btn-block")
 
     # Wait for navigation to complete
     page.wait_for_url("https://app.utrsports.net/home")

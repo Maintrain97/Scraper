@@ -161,7 +161,7 @@ def main():
     print(f"Checking {player_count} player profiles for {tournament_type} tournament...")
     
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False)  # Run headless for speed
+        browser = p.chromium.launch(headless=False)
         context = browser.new_context()
         page = context.new_page()
         
