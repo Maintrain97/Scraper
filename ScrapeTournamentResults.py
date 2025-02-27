@@ -1,225 +1,191 @@
 from playwright.sync_api import sync_playwright
+import re
+from collections import defaultdict
 
 base_url = "https://app.utrsports.net"
 EMAIL = "ianders@lisd.org"
 password = input("Enter ianders UTR password: ")
-tournament = input("Which tournament: ")
+tournament_input = input("Which tournament: ")
+tournament = tournament_input.lower()
 
-# VARSITY = ['Aarush', 'Nathaniel', 'Cole']
+# Ask user to specify the tournament type
+tournament_type = input("Tournament type (VARSITY, JV, or BOTH): ").upper()
+while tournament_type not in ["VARSITY", "JV", "BOTH"]:
+    print("Invalid tournament type. Please enter VARSITY, JV, or BOTH.")
+    tournament_type = input("Tournament type (VARSITY, JV, or BOTH): ").upper()
+
+# Player lists
 VARSITY = [
-    "Sydney",
-    "Jasmine",
-    "Anna",
-    "Sophie",
-    "Lucy",
-    "Olivia",
-    "Olivia",
-    "Madalynn",
-    "Leah",
-    "Erika",
-    "Audry",
-    "Cole",
-    "Aarush",
-    "Nathaniel",
-    "Jaden",
-    "Kaden",
-    "Sebasti�n",
-    "Jessetyler",
-    "Cohen",
-    "Joe",
+    "Sydney", "Jasmine", "Anna", "Sophie", "Lucy", "Olivia",
+    "Madalynn", "Leah", "Erika", "Audry", "Cole", "Aarush", "Nathaniel",
+    "Jaden", "Kaden", "Sebastián", "Jessetyler", "Cohen", "Joe",
 ]
+
 JV = [
-    "Aaira",
-    "Aidan",
-    "Erika",
-    "Ethan",
-    "Gunnar",
-    "Ishan",
-    "Joe",
-    "Juan",
-    "Kingston",
-    "Moses",
-    "Reya",
-    "Ryan",
-    "Sana",
-    "Sarah",
-    "Sasha",
-    "Audry",
-    "Adan",
-]
-tournament_results = []
-
-# Read player URLs from file
-with open("player_links.txt", "r") as f:
-    profile_data = [line.strip().split() for line in f.readlines()]
-
-# Filter out Pre-Freshmen and get profile URLs
-profile_urls = [
-    data[-1]
-    for data in profile_data
-    if data[-2].lower() != "pre-freshman" and data[0] in JV
+    "Aaira", "Aidan", "Erika", "Ethan", "Gunnar", "Ishan", "Joe",
+    "Juan", "Kingston", "Moses", "Reya", "Ryan", "Sana", "Sarah",
+    "Sasha", "Audry", "Adan",
 ]
 
+# Identify dual-team players
+DUAL_TEAM_PLAYERS = set(VARSITY) & set(JV)
+print(f"Dual-team players: {', '.join(sorted(DUAL_TEAM_PLAYERS))}")
+
+# Determine which players to check based on tournament type
+players_to_check = set()
+if tournament_type == "VARSITY":
+    players_to_check = set(VARSITY)
+elif tournament_type == "JV":
+    players_to_check = set(JV)
+else:  # BOTH
+    players_to_check = set(VARSITY) | set(JV)
+
+# Cache for tournament results to avoid duplicates
+tournament_results = set()
+
+# Load player URLs from file and filter
+def load_player_urls():
+    with open("player_links.txt", "r") as f:
+        profile_data = [line.strip().split() for line in f.readlines()]
+    
+    # Filter for selected players and exclude pre-freshmen
+    return [
+        data[-1] for data in profile_data
+        if data[-2].lower() != "pre-freshman" and data[0] in players_to_check
+    ]
+
+def extract_set_scores(score_items):
+    """Process and format set scores more efficiently"""
+    num_sets = len(score_items) // 4
+    quarters = len(score_items) // 4
+    
+    formatted_scores = []
+    for i in range(num_sets):
+        # Extract scores and tiebreaks
+        team1_score = score_items[i]
+        team2_score = score_items[i + quarters]
+        
+        # Process tiebreaks
+        tiebreaks = []
+        if len(team1_score) > 1:
+            tiebreaks.append(int(team1_score[1:]))
+        if len(team2_score) > 1:
+            tiebreaks.append(int(team2_score[1:]))
+        
+        # Format the score
+        score = f"{team1_score[0]}-{team2_score[0]}"
+        if tiebreaks:
+            score += f"({min(tiebreaks)})"
+        
+        formatted_scores.append(score)
+    
+    return " ".join(formatted_scores)
 
 def scrape_matches(event_block, profile_url, tournament_name):
     """Extracts match results only from the correct tournament."""
+    global tournament_results
+    
     match_cards = event_block.locator(".utr-card.score-card").all()
     for match in match_cards:
         try:
-            # Get all player names from the desktop view for each team
-            team1_players = (
-                match.locator(".d-none.d-md-block .team")
-                .nth(0)
-                .locator(".player-details a.flex-column.player-name")
-                .all()
-            )
-            team2_players = (
-                match.locator(".d-none.d-md-block .team")
-                .nth(1)
-                .locator(".player-details a.flex-column.player-name")
-                .all()
-            )
-
-            # Join the names for each team
-            team_1_names = "/".join(
-                [player.inner_text().strip() for player in team1_players]
-            )
-            team_2_names = "/".join(
-                [player.inner_text().strip() for player in team2_players]
-            )
-
-            score_items = match.locator(".score-item").all()
-            for i in range(len(score_items)):
-                score_items[i] = score_items[i].inner_text().strip()
-
-            # Format the match scores
-            # Divison by 4 needed to exclude desktop copy of scores
-            set_scores = ""
-            for i in range(len(score_items) // 4):
-                tb = []
-                if len(score_items[i]) > 1:
-                    tb.append(int(score_items[i][1:]))
-                set_scores += score_items[i][0]
-                set_scores += "-"
-                if len(score_items[int(i + len(score_items) * (1 / 4))]) > 1:
-                    tb.append(int(score_items[int(i + len(score_items) * (1 / 4))][1:]))
-                set_scores += score_items[int(i + len(score_items) * (1 / 4))][0]
-
-                if len(tb) > 0:
-                    set_scores += f"({str(min(tb))})"
-
-                set_scores += " "
-            result_line = f". {team_1_names} vs {team_2_names} {set_scores}"
-
-            if result_line not in tournament_results:
-                tournament_results.append(result_line)
-
+            # Get player names more efficiently
+            teams = []
+            for team_idx in range(2):
+                players = match.locator(".d-none.d-md-block .team") \
+                               .nth(team_idx) \
+                               .locator(".player-details a.flex-column.player-name") \
+                               .all()
+                
+                team_names = "/".join([player.inner_text().strip() for player in players])
+                teams.append(team_names)
+            
+            # Extract scores
+            score_items = [item.inner_text().strip() for item in match.locator(".score-item").all()]
+            set_scores = extract_set_scores(score_items)
+            
+            # Create result string
+            result_line = f". {teams[0]} vs {teams[1]} {set_scores}"
+            tournament_results.add(result_line)
+            
         except Exception as match_error:
-            print(
-                f"Error processing match for {profile_url} in {tournament_name}: {match_error}"
-            )
+            print(f"Error processing match for {profile_url} in {tournament_name}: {match_error}")
 
+def switch_event_type(page, event_type):
+    """Switch between singles and doubles views efficiently"""
+    current_selection = page.locator("div.popovermenu-anchor.resultsTab__anchorClass__PGL2O.pl8 h6") \
+                           .first.inner_text().strip().lower()
+    
+    if event_type.lower() not in current_selection:
+        page.locator("div.popovermenu-anchor.resultsTab__anchorClass__PGL2O.pl8").first.click()
+        page.locator(f"div#item{event_type.lower()}.menu-item").click()
+        page.wait_for_timeout(1000)  # Reduced timeout
+        return True
+    return False
 
-with sync_playwright() as p:
-    browser = p.chromium.launch(headless=False)
-    context = browser.new_context()
-    page = context.new_page()
+def process_profile(page, profile_url):
+    """Process a single player profile for tournament results"""
+    page.goto(profile_url)
+    page.wait_for_timeout(1000)  # Reduced timeout
+    
+    # Check singles first
+    switch_event_type(page, "singles")
+    found_results = process_events(page, profile_url)
+    
+    # If no singles results, check doubles
+    if not found_results:
+        switch_event_type(page, "doubles")
+        process_events(page, profile_url)
 
-    # Navigate to login page
-    page.goto("https://app.utrsports.net/login")
-    page.fill("#emailInput", EMAIL)
-    page.fill("#passwordInput", password)
-    page.click(
-        "#myutr-app-body > div > div > div > div > div > div:nth-child(3) > form > div:nth-child(3) > button"
-    )
-    page.wait_for_url("https://app.utrsports.net/home")
+def process_events(page, profile_url):
+    """Process all events on the current page"""
+    found_results = False
+    event_blocks = page.locator("div.eventItem__eventItem__2Xpsd").all()
+    
+    for event in event_blocks:
+        try:
+            tournament_name = event.locator(".eventItem__eventName__6hntZ span:not(.eventItem__middleDot__1ttwt)") \
+                                .inner_text().strip()
+            
+            if tournament.lower() in tournament_name.lower():
+                scrape_matches(event, profile_url, tournament_name)
+                found_results = True
+        except Exception as e:
+            print(f"Error processing event for {profile_url}: {e}")
+    
+    return found_results
 
-    # Visit each player's profile and extract tournament results
-    for profile_url in profile_urls:
-        page.goto(profile_url)
-        page.wait_for_timeout(2000)
+def main():
+    # Get player URLs based on tournament type
+    profile_urls = load_player_urls()
+    player_count = len(profile_urls)
+    print(f"Checking {player_count} player profiles for {tournament_type} tournament...")
+    
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=False)  # Run headless for speed
+        context = browser.new_context()
+        page = context.new_page()
+        
+        # Login
+        page.goto("https://app.utrsports.net/login")
+        page.fill("#emailInput", EMAIL)
+        page.fill("#passwordInput", password)
+        page.click("button.btn.btn-primary.btn-xl.btn-block")
+        page.wait_for_url("https://app.utrsports.net/home")
+        
+        # Process each player profile
+        for i, profile_url in enumerate(profile_urls, 1):
+            print(f"Processing profile {i}/{player_count}: {profile_url}")
+            process_profile(page, profile_url)
+        
+        browser.close()
+    
+    # Write results to file
+    with open("tournament_results.txt", "w") as f:
+        f.write(tournament_input + "\n")
+        for result in sorted(tournament_results):
+            f.write(result + "\n")
+    
+    print(f"Extracted {len(tournament_results)} tournament results.")
 
-        # Ensure we are starting on Singles
-        current_selection = (
-            page.locator("div.popovermenu-anchor.resultsTab__anchorClass__PGL2O.pl8 h6")
-            .first.inner_text()
-            .strip()
-            .lower()
-        )
-        if "singles" not in current_selection:
-            dropdown_anchor = page.locator(
-                "div.popovermenu-anchor.resultsTab__anchorClass__PGL2O.pl8"
-            ).first
-            dropdown_anchor.click()
-            page.locator("div#itemsingles.menu-item").click()
-            page.wait_for_timeout(2000)
-
-        found_results = False
-
-        # In your main loop where you're processing events
-        event_blocks = page.locator("div.eventItem__eventItem__2Xpsd").all()
-        for event in event_blocks:
-            try:
-                tournament_name = (
-                    event.locator(
-                        ".eventItem__eventName__6hntZ span:not(.eventItem__middleDot__1ttwt)"
-                    )
-                    .inner_text()
-                    .strip()
-                )
-                if tournament.lower() in tournament_name.lower():
-                    # Pass the event block instead of the page
-                    scrape_matches(event, profile_url, tournament_name)
-                    found_results = True
-            except Exception as e:
-                print(f"Error processing event for {profile_url}: {e}")
-
-        # If no SINGLES results, check DOUBLES
-        if not found_results:
-            try:
-                current_selection = (
-                    page.locator(
-                        "div.popovermenu-anchor.resultsTab__anchorClass__PGL2O.pl8 h6"
-                    )
-                    .first.inner_text()
-                    .strip()
-                    .lower()
-                )
-                if "doubles" not in current_selection:
-                    dropdown_anchor = page.locator(
-                        "div.popovermenu-anchor.resultsTab__anchorClass__PGL2O.pl8"
-                    ).first
-                    dropdown_anchor.click()
-                    page.locator("div#itemdoubles.menu-item").click()
-                    page.wait_for_timeout(2000)
-
-                    # In your main loop where you're processing events
-                    event_blocks = page.locator("div.eventItem__eventItem__2Xpsd").all()
-                    for event in event_blocks:
-                        try:
-                            tournament_name = (
-                                event.locator(
-                                    ".eventItem__eventName__6hntZ span:not(.eventItem__middleDot__1ttwt)"
-                                )
-                                .inner_text()
-                                .strip()
-                            )
-                            if tournament.lower() in tournament_name.lower():
-                                # Pass the event block instead of the page
-                                scrape_matches(event, profile_url, tournament_name)
-                        except Exception as e:
-                            print(f"Error processing event for {profile_url}: {e}")
-
-            except Exception as e:
-                print(f"Error switching to doubles for {profile_url}: {e}")
-
-    browser.close()
-
-
-# Write tournament results to a file
-with open("tournament_results.txt", "w") as f:
-    f.write(tournament + "\n")
-    for result in tournament_results:
-        f.write(result + "\n")
-
-print(f"Extracted {len(tournament_results)} tournament results.")
+if __name__ == "__main__":
+    main()
