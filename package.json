@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "node index.js"
+    "test": "node app.jsx",
+    "start": "node app.jsx"
   },
   "keywords": [],
   "author": "",
