@@ -9,7 +9,8 @@ password = input("Enter your UTR password: ")
 player_info = {}  # Use a dictionary to ensure unique URLs
 
 with sync_playwright() as p:
-    browser = p.chromium.launch(headless=True)
+    # Changed to headless=False to make the browser visible
+    browser = p.chromium.launch(headless=False)
     context = browser.new_context()
     page = context.new_page()
 
@@ -45,13 +46,20 @@ with sync_playwright() as p:
         href = element.get_attribute("href")
         if href:
             full_url = BASE_URL + href
-            name = element.inner_text().strip()
+            name_element = element.locator(".name").first
+            name = ' '.join(name_element.inner_text().strip().split()) if name_element.count() > 0 else "Unknown"
+
+
+            grade_element = element.locator(".d-flex.aic .values").first
+            grade = grade_element.inner_text().strip() if grade_element.count() > 0 else "Unknown"
+            
             name_parts = name.split()
             if len(name_parts) >= 2:
+                
                 first_name = name_parts[0]
                 last_name = " ".join(name_parts[1:])
-                player_info[full_url] = f"{first_name} {last_name} {full_url}"
-
+                player_info[full_url] = f"{first_name} {last_name} {grade} {full_url}"
+    
     browser.close()
 
 # Write extracted player information to a file
