@@ -18,7 +18,7 @@ while tournament_type not in ["VARSITY", "JV", "BOTH"]:
 VARSITY = [
     "Sydney", "Jasmine", "Anna", "Sophie", "Lucy", "Olivia",
     "Madalynn", "Leah", "Erika", "Audry", "Cole", "Aarush", "Nathaniel",
-    "Jaden", "Kaden", "Sebastián", "Jessetyler", "Cohen", "Joe",
+    "Jaden", "Kaden", "Sebastián", "Jessetyler", "Cohen", "Joe", "Ryan"
 ]
 
 JV = [
@@ -118,14 +118,14 @@ def switch_event_type(page, event_type):
     if event_type.lower() not in current_selection:
         page.locator("div.popovermenu-anchor.resultsTab__anchorClass__PGL2O.pl8").first.click()
         page.locator(f"div#item{event_type.lower()}.menu-item").click()
-        page.wait_for_timeout(1000)  # Reduced timeout
+        page.wait_for_timeout(2000)  
         return True
     return False
 
 def process_profile(page, profile_url):
     """Process a single player profile for tournament results"""
     page.goto(profile_url)
-    page.wait_for_timeout(1000)  # Reduced timeout
+    page.wait_for_timeout(1000)
     
     # Check singles first
     switch_event_type(page, "singles")
@@ -181,7 +181,7 @@ def main():
     
     # Write results to file
     with open("tournament_results.txt", "w") as f:
-        f.write(tournament_input + "\n")
+        f.write("INSERT_DATE_HERE " + tournament_input + " L0-0\n\nBoys Doubles\n\nGirls Doubles\n\nMixed Doubles\n\nBoys Singles\n\nGirls Singles\n")
         for result in sorted(tournament_results):
             f.write(result + "\n")
     
