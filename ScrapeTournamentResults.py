@@ -85,7 +85,7 @@ def scrape_matches(event_block, profile_url, tournament_name):
     """Extracts match results only from the correct tournament."""
     global tournament_results
     
-    match_cards = event_block.locator(".utr-card.score-card").all()
+    match_cards = event_block.locator(".utr-card.score-card.false").all()
     for match in match_cards:
         try:
             # Get player names more efficiently
