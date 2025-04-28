@@ -181,7 +181,8 @@ def main():
     
     # Write results to file
     with open("tournament_results.txt", "w") as f:
-        f.write("INSERT_DATE_HERE " + tournament_input + " L0-0\n\nBoys Doubles\n\nGirls Doubles\n\nMixed Doubles\n\nBoys Singles\n\nGirls Singles\n")
+        team = "JV" if tournament_type == "JV" else "Varsity"
+        f.write("INSERT_DATE_HERE "+ team + " @ " + tournament_input + " L0-0\n\nBoys Doubles\n\nGirls Doubles\n\nMixed Doubles\n\nBoys Singles\n\nGirls Singles\n")
         for result in sorted(tournament_results):
             f.write(result + "\n")
     
