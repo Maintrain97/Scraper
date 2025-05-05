@@ -12,8 +12,8 @@ PLAYER_URLS = [
     # Add more player URLs here if needed
 ]
 
-EMAIL = "ianders@lisd.org"
-PASSWORD = "REMOVED"
+EMAIL = input("Enter UTR Email: ")
+PASSWORD = input("Enter UTR Password: ")
 
 
 def get_opponents_from_profile(page, profile_url, game_type="singles"):
