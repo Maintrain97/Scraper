@@ -14,6 +14,7 @@ PLAYER_URLS = [
 
 EMAIL = input("Enter UTR Email: ")
 PASSWORD = input("Enter UTR Password: ")
+TYPE = "singles" # change to doubles if needed
 
 
 def get_opponents_from_profile(page, profile_url, game_type="singles"):
@@ -84,7 +85,7 @@ def main():
         for url in PLAYER_URLS:
             player_name = url.split("/")[-1].split("?")[0]  # Assuming the last part of the URL is the player identifier
             print(f"Getting opponents for {player_name}...")
-            opponents = get_opponents_from_profile(page, url, game_type="doubles")  # Use "doubles" here if needed
+            opponents = get_opponents_from_profile(page, url, game_type=TYPE) 
             players_opponents[player_name] = opponents
 
         # Check if the two players have played each other
